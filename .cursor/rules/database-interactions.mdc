@@ -1,0 +1,124 @@
+---
+alwaysApply: true
+description: Enforces that all database interactions must use Drizzle ORM or raw queries through the db instance
+---
+
+# Database Interaction Rules
+
+All database interactions in this project **MUST** use either:
+
+1. **Drizzle ORM methods** (preferred)
+2. **Raw SQL queries** through the Drizzle db instance
+
+## Required Import
+
+Always import the database instance from [db/index.ts](mdc:db/index.ts):
+
+```typescript
+import { db } from '@/db';
+```
+
+## Database Schema
+
+All table schemas are defined in [db/schema.ts](mdc:db/schema.ts). Always reference these schemas when performing database operations.
+
+## Allowed Patterns
+
+### ✅ Drizzle ORM Queries (Preferred)
+
+Use Drizzle's query builder methods:
+
+```typescript
+import { db } from '@/db';
+import { decks, cards } from '@/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
+
+// SELECT
+const allDecks = await db.select().from(decks);
+const deck = await db.select().from(decks).where(eq(decks.id, deckId));
+
+// INSERT
+const [newDeck] = await db.insert(decks).values({ title, userId }).returning();
+
+// UPDATE
+const [updated] = await db.update(decks)
+  .set({ title: newTitle, updatedAt: new Date() })
+  .where(eq(decks.id, deckId))
+  .returning();
+
+// DELETE
+await db.delete(cards).where(eq(cards.deckId, deckId));
+
+// JOINS (using relational queries)
+const decksWithCards = await db.query.decks.findMany({
+  with: { cards: true }
+});
+```
+
+### ✅ Raw SQL Queries (When Necessary)
+
+For complex queries not easily expressed in Drizzle's query builder:
+
+```typescript
+import { db } from '@/db';
+import { sql } from 'drizzle-orm';
+
+const result = await db.execute(sql`
+  SELECT * FROM decks 
+  WHERE user_id = ${userId} 
+  ORDER BY created_at DESC
+`);
+```
+
+## Forbidden Patterns
+
+### ❌ Direct Database Client Usage
+
+**NEVER** use direct PostgreSQL client libraries:
+
+```typescript
+// ❌ FORBIDDEN
+import { Client } from 'pg';
+const client = new Client();
+
+// ❌ FORBIDDEN
+import postgres from 'postgres';
+const sql = postgres(connectionString);
+
+// ❌ FORBIDDEN - bypassing Drizzle
+pool.query('SELECT * FROM decks');
+```
+
+### ❌ ORMs Other Than Drizzle
+
+**NEVER** use other ORM libraries:
+
+```typescript
+// ❌ FORBIDDEN
+import { PrismaClient } from '@prisma/client';
+
+// ❌ FORBIDDEN
+import { Sequelize } from 'sequelize';
+
+// ❌ FORBIDDEN
+import mongoose from 'mongoose';
+```
+
+## Query Examples Reference
+
+See [db/queries.example.ts](mdc:db/queries.example.ts) for example query patterns using Drizzle ORM.
+
+## Why This Rule Exists
+
+1. **Type Safety**: Drizzle provides full TypeScript type inference
+2. **Consistency**: All database code follows the same patterns
+3. **Maintainability**: Schema changes are tracked in one place
+4. **Security**: Drizzle protects against SQL injection
+5. **Performance**: Connection pooling and query optimization are handled centrally
+
+## Exception Process
+
+If you absolutely need to use a pattern not covered by Drizzle:
+1. Document why in code comments
+2. Use raw SQL through `db.execute(sql`...`)` 
+3. Never bypass the db instance from [db/index.ts](mdc:db/index.ts)
