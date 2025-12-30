@@ -1,148 +1,100 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
-import { BookOpen, Plus, Brain, TrendingUp } from "lucide-react";
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Layers, Calendar } from 'lucide-react';
+import { getUserDecksWithCardCounts } from '@/db/queries/deck-queries';
+import { CreateDeckDialog } from '@/components/create-deck-dialog';
+import { DeleteDeckButton } from '@/components/delete-deck-button';
 
 export default async function DashboardPage() {
   const { userId } = await auth();
   
-  // Redirect to home if not authenticated
   if (!userId) {
-    redirect("/");
+    redirect('/sign-in');
   }
-
-  const user = await currentUser();
-
+  
+  // Fetch user's decks with card counts via query helper
+  const decksWithCounts = await getUserDecksWithCardCounts(userId);
+  
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">
-            Welcome back, {user?.firstName || "there"}! 👋
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Ready to continue your learning journey?
+    <div className="container mx-auto py-8 px-6">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-4xl font-bold">My Decks</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage your flashcard decks and start studying
           </p>
         </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatsCard
-            title="Total Decks"
-            value="0"
-            icon={<BookOpen className="w-6 h-6" />}
-            gradient="from-blue-500 to-cyan-500"
-          />
-          <StatsCard
-            title="Total Cards"
-            value="0"
-            icon={<Brain className="w-6 h-6" />}
-            gradient="from-purple-500 to-pink-500"
-          />
-          <StatsCard
-            title="Cards Studied"
-            value="0"
-            icon={<TrendingUp className="w-6 h-6" />}
-            gradient="from-orange-500 to-red-500"
-          />
-          <StatsCard
-            title="Streak Days"
-            value="0"
-            icon={<span className="text-2xl">🔥</span>}
-            gradient="from-green-500 to-emerald-500"
-          />
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <ActionCard
-              title="Create New Deck"
-              description="Start a new flashcard collection"
-              icon={<Plus className="w-8 h-8" />}
-              href="/dashboard/decks/new"
-            />
-            <ActionCard
-              title="Study Now"
-              description="Review your flashcards"
-              icon={<Brain className="w-8 h-8" />}
-              href="/dashboard/study"
-            />
-            <ActionCard
-              title="Browse Decks"
-              description="View all your decks"
-              icon={<BookOpen className="w-8 h-8" />}
-              href="/dashboard/decks"
-            />
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div>
-          <h2 className="text-2xl font-semibold mb-4">Recent Activity</h2>
-          <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <p className="text-muted-foreground">
-              No recent activity yet. Create your first deck to get started!
-            </p>
-          </div>
-        </div>
+        <CreateDeckDialog
+          trigger={
+            <Button size="lg">
+              Create New Deck
+            </Button>
+          }
+        />
       </div>
+
+      {decksWithCounts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="bg-muted rounded-full p-6 mb-4">
+            <Layers className="h-12 w-12 text-muted-foreground" />
+          </div>
+          <h2 className="text-2xl font-semibold mb-2">No decks yet</h2>
+          <p className="text-muted-foreground mb-6 max-w-md">
+            Create your first flashcard deck to start learning!
+          </p>
+          <CreateDeckDialog
+            trigger={
+              <Button size="lg">
+                Create Your First Deck
+              </Button>
+            }
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {decksWithCounts.map((deck) => (
+            <div
+              key={deck.id}
+              className="bg-card border border-border rounded-lg p-6 hover:border-primary transition-all hover:shadow-lg relative group"
+            >
+              <div 
+                className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                style={{ pointerEvents: 'auto' }}
+              >
+                <DeleteDeckButton deckId={deck.id} deckTitle={deck.title} />
+              </div>
+              <Link
+                href={`/decks/${deck.id}`}
+                className="block"
+              >
+                <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors pr-8">
+                  {deck.title}
+                </h3>
+                {deck.description && (
+                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+                    {deck.description}
+                  </p>
+                )}
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Layers className="h-4 w-4" />
+                    <span>{deck.cardCount} cards</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>
+                      {new Date(deck.updatedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-// Stats Card Component
-function StatsCard({
-  title,
-  value,
-  icon,
-  gradient,
-}: {
-  title: string;
-  value: string;
-  icon: React.ReactNode;
-  gradient: string;
-}) {
-  return (
-    <div className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`bg-gradient-to-br ${gradient} p-3 rounded-lg text-white`}>
-          {icon}
-        </div>
-      </div>
-      <h3 className="text-muted-foreground text-sm font-medium mb-1">{title}</h3>
-      <p className="text-3xl font-bold text-foreground">{value}</p>
-    </div>
-  );
-}
-
-// Action Card Component
-function ActionCard({
-  title,
-  description,
-  icon,
-  href,
-}: {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  href: string;
-}) {
-  return (
-    <a
-      href={href}
-      className="bg-card border border-border rounded-lg p-6 hover:border-primary hover:shadow-lg transition-all group"
-    >
-      <div className="flex items-start gap-4">
-        <div className="text-primary group-hover:scale-110 transition-transform">
-          {icon}
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-foreground mb-1">{title}</h3>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-      </div>
-    </a>
-  );
-}

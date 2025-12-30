@@ -2,9 +2,23 @@
 alwaysApply: true
 ---
 
-# Shadcn UI Guidelines
+# Shadcn UI - EXCLUSIVE UI Library and Theme
 
-This project uses **Shadcn UI** for all UI elements.
+## Critical Rule: ONLY Shadcn UI
+
+This project uses **EXCLUSIVELY Shadcn UI** for ALL UI elements and theming throughout the entire application.
+
+**NO OTHER UI LIBRARIES OR THEME SYSTEMS ARE ALLOWED.**
+
+## Scope
+
+This rule applies to:
+- ✅ All components (buttons, forms, dialogs, cards, etc.)
+- ✅ All styling and theming
+- ✅ All color schemes and design tokens
+- ✅ Third-party integrations (must use Shadcn UI styling)
+- ✅ Custom components (must be built on Shadcn UI primitives)
+- ❌ Clerk authentication components (keep Clerk's default theme)
 
 ## Installation
 
@@ -28,8 +42,131 @@ npx shadcn@latest add [component-name]
 npx shadcn@latest add button
 ```
 
-## Usage Notes
+## Clerk Integration
 
-- Always prefer Shadcn UI components over custom UI implementations
-- Check if a component is already installed before adding it
-- Follow Shadcn UI's component patterns and conventions
+Clerk components **MUST keep their default theme** and should NOT be customized with Shadcn UI variables:
+
+```typescript
+import { ClerkProvider } from '@clerk/nextjs';
+
+// ✅ CORRECT - Use Clerk's default theme
+<ClerkProvider>
+  {children}
+</ClerkProvider>
+
+// ❌ FORBIDDEN - Do not customize Clerk's appearance
+<ClerkProvider
+  appearance={{
+    variables: {
+      colorPrimary: 'hsl(var(--primary))',
+      // ... DO NOT DO THIS
+    }
+  }}
+>
+  {children}
+</ClerkProvider>
+```
+
+## Mandatory Rules
+
+### ✅ REQUIRED:
+- Use Shadcn UI components for all UI elements (except Clerk components)
+- Use Shadcn UI theme variables (CSS custom properties) for all colors and spacing
+- Keep Clerk components with their default theme (do not customize)
+- Build custom components using Shadcn UI primitives and styling
+- Follow Shadcn UI's design system and conventions
+- Use `cn()` utility for className merging (from `@/lib/utils`)
+
+### ❌ FORBIDDEN:
+- **Material UI (MUI)** - DO NOT USE
+- **Ant Design** - DO NOT USE
+- **Chakra UI** - DO NOT USE
+- **Bootstrap** - DO NOT USE
+- **Tailwind UI (paid components)** - DO NOT USE
+- **Custom theme systems** - DO NOT USE
+- **Other design systems** - DO NOT USE
+- **Inline styles that bypass Shadcn theme** - DO NOT USE
+- **Custom CSS that doesn't use Shadcn variables** - AVOID
+
+## Theme Variables
+
+Always use Shadcn UI CSS custom properties for theming:
+
+```css
+/* These are defined in globals.css */
+--background
+--foreground
+--primary
+--primary-foreground
+--secondary
+--secondary-foreground
+--muted
+--muted-foreground
+--accent
+--accent-foreground
+--destructive
+--destructive-foreground
+--border
+--input
+--ring
+--radius
+```
+
+## Custom Components
+
+When building custom components, always:
+1. Check if a Shadcn component exists first
+2. Use Shadcn UI primitives (e.g., `@radix-ui/*`)
+3. Apply Shadcn UI styling patterns
+4. Use theme variables from `globals.css`
+
+```typescript
+// ✅ CORRECT - Using Shadcn UI patterns
+import { cn } from "@/lib/utils"
+
+interface CustomCardProps {
+  className?: string
+}
+
+export function CustomCard({ className, ...props }: CustomCardProps) {
+  return (
+    <div className={cn(
+      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      className
+    )} {...props} />
+  )
+}
+
+// ❌ FORBIDDEN - Using non-Shadcn patterns
+import { Box } from '@mui/material' // NEVER DO THIS
+```
+
+## Why This Rule Exists
+
+1. **Consistency**: Uniform design language across the entire application
+2. **Maintainability**: Single source of truth for UI patterns
+3. **Performance**: No conflicting CSS or duplicate component libraries
+4. **Developer Experience**: One system to learn and use
+5. **Best Practices**: Clerk maintains its own optimized theme and UX patterns
+
+## Verification Checklist
+
+Before implementing any UI:
+- [ ] Is there a Shadcn UI component for this?
+- [ ] Am I using Shadcn UI theme variables?
+- [ ] Am I using the `cn()` utility for className merging?
+- [ ] Are Clerk components using their default theme (not customized)?
+- [ ] Have I avoided importing any other UI libraries?
+- [ ] Does this follow Shadcn UI conventions?
+
+## Exception Policy
+
+**There are NO exceptions to this rule.** 
+
+If you need a component not available in Shadcn UI:
+1. Build it using Shadcn UI primitives and styling
+2. Follow Shadcn UI design patterns
+3. Use Shadcn UI theme variables
+4. Document it as a custom component
+
+**NEVER install or use alternative UI libraries.**

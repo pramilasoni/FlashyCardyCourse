@@ -1,50 +1,91 @@
 import { db } from './index';
-import { users } from './schema';
-import { eq } from 'drizzle-orm';
+import { decks, cards } from './schema';
+import { eq, and } from 'drizzle-orm';
 
 // Example queries - you can use these as a reference
 
-// Create a new user
-export async function createUser(email: string, name?: string) {
-  const [user] = await db
-    .insert(users)
+// Create a new deck
+export async function createDeck(userId: string, title: string, description?: string) {
+  const [deck] = await db
+    .insert(decks)
     .values({
-      email,
-      name,
+      userId,
+      title,
+      description,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     })
     .returning();
-  return user;
+  return deck;
 }
 
-// Get all users
-export async function getAllUsers() {
-  return await db.select().from(users);
-}
-
-// Get user by email
-export async function getUserByEmail(email: string) {
-  const [user] = await db
+// Get all decks for a user
+export async function getAllDecks(userId: string) {
+  return await db
     .select()
-    .from(users)
-    .where(eq(users.email, email));
-  return user;
+    .from(decks)
+    .where(eq(decks.userId, userId));
 }
 
-// Update user
-export async function updateUser(id: string, data: { email?: string; name?: string }) {
-  const [updatedUser] = await db
-    .update(users)
+// Get deck by ID (with ownership verification)
+export async function getDeckById(deckId: string, userId: string) {
+  const [deck] = await db
+    .select()
+    .from(decks)
+    .where(and(
+      eq(decks.id, deckId),
+      eq(decks.userId, userId)
+    ))
+    .limit(1);
+  return deck;
+}
+
+// Update deck
+export async function updateDeck(deckId: string, userId: string, data: { title?: string; description?: string }) {
+  const [updatedDeck] = await db
+    .update(decks)
     .set({
       ...data,
       updatedAt: new Date(),
     })
-    .where(eq(users.id, id))
+    .where(and(
+      eq(decks.id, deckId),
+      eq(decks.userId, userId)
+    ))
     .returning();
-  return updatedUser;
+  return updatedDeck;
 }
 
-// Delete user
-export async function deleteUser(id: string) {
-  await db.delete(users).where(eq(users.id, id));
+// Delete deck
+export async function deleteDeck(deckId: string, userId: string) {
+  await db
+    .delete(decks)
+    .where(and(
+      eq(decks.id, deckId),
+      eq(decks.userId, userId)
+    ));
+}
+
+// Create a new card
+export async function createCard(deckId: string, front: string, back: string) {
+  const [card] = await db
+    .insert(cards)
+    .values({
+      deckId,
+      front,
+      back,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+  return card;
+}
+
+// Get all cards for a deck
+export async function getCardsByDeck(deckId: string) {
+  return await db
+    .select()
+    .from(cards)
+    .where(eq(cards.deckId, deckId));
 }
 

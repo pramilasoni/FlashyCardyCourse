@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Decks table - represents a collection of flashcards (e.g., "Danish Language", "British History")
@@ -17,6 +17,8 @@ export const cards = pgTable('cards', {
   deckId: uuid('deck_id').notNull().references(() => decks.id, { onDelete: 'cascade' }),
   front: text('front').notNull(), // Question/prompt (e.g., "Dog", "the battle of hastings")
   back: text('back').notNull(), // Answer (e.g., "Hund", "1066")
+  masteryLevel: integer('mastery_level').default(0).notNull(), // 0 = not studied, 1-5 = mastery levels
+  lastStudied: timestamp('last_studied'), // When the card was last studied
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
